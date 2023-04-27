@@ -16,9 +16,8 @@ pub struct RayPayload {
 pub fn generate_camera_rays(
     #[spirv(global_invocation_id)] pos: glam::UVec3,
     #[spirv(num_workgroups)] size: glam::UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] cameras: &[Camera],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] cameras: &[Camera],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &mut WorkQueue<WorkItem<Ray3f>>,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] test: &[i32],
 ) {
     assert!(pos.x < size.x);
     assert!(pos.y < size.y);
@@ -49,7 +48,7 @@ pub fn generate_camera_rays(
         d: d.extend(1.),
         tmin: 0.001,
         tmax: 10000.,
-        t: test[0] as f32,
+        t: 0.,
     };
     rays.set(WorkItem { item: ray, idx }, idx, wavefront_size);
 

@@ -235,6 +235,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7464c178da64eeda8bdc1e70378593cba8e37a00a3846d593088db7a590ee3a3"
 
 [[package]]
+name = "builder"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "spirv-builder",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1970,6 +1979,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "rspirv-reflect"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9b81fec864410642a101e18ea08bed825287d5b0ca7852b8c9605b2b1b15557"
+dependencies = [
+ "rspirv",
+ "thiserror",
+]
+
+[[package]]
+name = "rust-shaders"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "spirv-std",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2450,10 +2477,14 @@ dependencies = [
  "hassle-rs",
  "image",
  "inline-spirv",
+ "once_cell",
  "pretty_env_logger",
+ "rspirv-reflect",
  "screen-13",
  "screen-13-egui",
  "screen-13-fx",
+ "serde",
+ "serde_json",
  "shaderc",
  "spirq 0.6.3 (git+https://github.com/PENGUINLIONG/spirq-rs.git)",
  "spirv-builder",

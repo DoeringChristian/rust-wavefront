@@ -10,7 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-const SHADERS: &[u8] = include_bytes!(env!("rust_shaders.spv"));
+// const SHADERS: &[u8] = include_bytes!(env!("rust_shaders.spv"));
 
 pub struct GBuffer {
     pub color: AnyImageNode,

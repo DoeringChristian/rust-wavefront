@@ -72,6 +72,6 @@ impl WavefrontPathIntegrator {
 
         // println!("{}", rays.len());
 
-        // dbg!(rays.items());
+        dbg!(rays.items());
     }
 }
