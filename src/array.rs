@@ -3,6 +3,7 @@ use screen_13::prelude::*;
 use std::any::type_name;
 use std::marker::PhantomData;
 use std::mem::size_of;
+use std::ops::Deref;
 use std::sync::Arc;
 
 /// Gives the number of bytes needed to make `offset` be aligned to `alignment`.
@@ -144,5 +145,15 @@ impl<T: Sized + Copy> Array<T> {
             count: data.len(),
             _ty: PhantomData,
         }
+    }
+    pub fn buf(&self) -> &Arc<Buffer> {
+        &self.buf
+    }
+}
+impl<T> Deref for Array<T> {
+    type Target = Buffer;
+
+    fn deref(&self) -> &Self::Target {
+        &self.buf
     }
 }

@@ -1,19 +1,20 @@
 mod accel;
 mod array;
+mod integrator;
 mod loaders;
+mod pipelines;
 mod renderer;
 mod sbt;
 mod scene;
+mod workqueue;
 
-use crevice::std140::AsStd140;
+use glam::*;
 use screen_13::prelude::*;
-use std::sync::Arc;
-use winit::event::DeviceEvent;
 
+use self::integrator::WavefrontPathIntegrator;
 use self::loaders::Loader;
 use self::renderer::PTRenderer;
 use self::scene::Scene;
-use glam::*;
 
 fn main() {
     pretty_env_logger::init();
@@ -25,31 +26,18 @@ fn main() {
     let device = &sc13.device;
     let mut cache = HashPool::new(device);
 
-    let presenter = screen_13_fx::GraphicPresenter::new(device).unwrap();
-    let mut pt_renderer = PTRenderer::new(device);
+    let integrator = WavefrontPathIntegrator::new(device);
 
     let mut scene = Scene::default();
     let loader = loaders::GltfLoader::default();
     loader.append("assets/cornell-box.gltf", &mut scene);
 
-    let mut i = 0;
-    let mut pitch = 0.;
-    let mut yaw = 0.;
+    let mut graph = RenderGraph::new();
 
-    sc13.run(|frame| {
-        if i == 0 {
-            scene.update(frame.device, &mut cache, frame.render_graph);
-            println!("{}", scene.material_data.as_ref().unwrap().count());
-        }
+    // scene.update(device, &mut cache, &mut graph);
 
-        let scene = scene.bind(frame.render_graph);
+    integrator.render(&mut scene, uvec2(4, 4));
 
-        let gbuffer =
-            pt_renderer.bind_and_render(&scene, i, 1024, 1024, 0, &mut cache, frame.render_graph);
-
-        presenter.present_image(frame.render_graph, gbuffer.color, frame.swapchain_image);
-        //frame.render_graph.clear_color_image(frame.swapchain_image);
-        i += 1;
-    })
-    .unwrap();
+    graph.resolve();
+    unsafe { device.device_wait_idle().unwrap() };
 }

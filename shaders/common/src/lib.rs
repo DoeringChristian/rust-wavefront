@@ -1,8 +1,13 @@
 #![cfg_attr(target_arch = "spirv", no_std, feature(asm_experimental_arch,))]
 
+mod workitems;
+pub mod workqueue;
+pub use workitems::*;
+
 use bytemuck::*;
 use spirv_std::glam::*;
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct Mesh {
@@ -13,6 +18,7 @@ pub struct Mesh {
     pub uvs: u32,
 }
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct Instance {
@@ -22,6 +28,7 @@ pub struct Instance {
     pub emitter: i32,
 }
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct Emitter {
@@ -50,6 +57,7 @@ impl Emitter {
     }
 }
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct Texture {
@@ -87,6 +95,7 @@ impl Texture {
     }
 }
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
 #[derive(Default, Clone, Copy)]
 #[repr(C)]
 pub struct Material {
@@ -96,11 +105,12 @@ pub struct Material {
     pub transmission: Texture,
 }
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
 #[derive(Clone, Copy)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct Camera {
-    pub to_world: Mat4,
-    pub to_view: Mat4,
+    pub to_world: [[f32; 4]; 4],
+    pub to_view: [[f32; 4]; 4],
     pub near_clip: f32,
     pub far_clip: f32,
 }
@@ -121,14 +131,22 @@ impl Camera {
             //println!("{:#?}", to_view);
         }
         Self {
-            to_world,
-            to_view,
+            to_world: to_world.to_cols_array_2d(),
+            to_view: to_view.to_cols_array_2d(),
             near_clip,
             far_clip,
             //size: glam::uvec2(width, height),
         }
     }
+    pub fn to_world(&self) -> Mat4 {
+        Mat4::from_cols_array_2d(&self.to_world)
+    }
+    pub fn to_view(&self) -> Mat4 {
+        Mat4::from_cols_array_2d(&self.to_view)
+    }
 }
+
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
 #[derive(Clone, Copy)]
 #[repr(C)]
 struct PushConstant {
@@ -136,4 +154,21 @@ struct PushConstant {
     pub max_depth: u32,
     pub rr_depth: u32,
     pub seed: u32,
+}
+
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
+#[derive(Clone, Copy)]
+#[repr(C, align(16))]
+pub struct Ray3f {
+    pub o: Vec4,
+    pub d: Vec4,
+    pub tmin: f32,
+    pub tmax: f32,
+    pub t: f32,
+}
+
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+#[repr(C)]
+pub struct GenerateCameraRaysPc {
+    pub camera: u32,
 }
