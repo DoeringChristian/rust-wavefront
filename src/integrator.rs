@@ -59,19 +59,19 @@ impl WavefrontPathIntegrator {
 
         scene.update(&self.device, &mut cache, &mut graph);
 
-        dbg!(&scene.cameras);
+        // dbg!(&scene.cameras);
         let scene = scene.bind(&mut graph);
 
         let rays = ItemWorkQueue::new(&self.device, (size.x * size.y) as _);
-        println!("{}", rays.len());
+        // println!("{}", rays.len());
         self.generate_camera_rays(scene, &mut graph, &rays, size);
 
         graph.resolve().submit(&mut cache, 0).unwrap();
 
         unsafe { self.device.device_wait_idle().unwrap() };
 
-        println!("{}", rays.len());
+        // println!("{}", rays.len());
 
-        dbg!(rays.items());
+        // dbg!(rays.items());
     }
 }

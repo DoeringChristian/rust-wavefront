@@ -18,26 +18,41 @@ use self::scene::Scene;
 
 fn main() {
     pretty_env_logger::init();
-    let sc13 = EventLoop::new()
-        .debug(true)
-        .ray_tracing(true)
-        .build()
+
+    let entry_points = spirq::ReflectConfig::new()
+        .spv(pipelines::SHADERS)
+        // .ref_all_rscs(true)
+        .reflect()
         .unwrap();
-    let device = &sc13.device;
-    let mut cache = HashPool::new(device);
 
-    let integrator = WavefrontPathIntegrator::new(device);
+    // dbg!(&entry_points);
+    for ep in entry_points {
+        if ep.name == "generate_camera_rays" {
+            dbg!(ep.vars);
+        }
+    }
+    // dbg!(env!("rust_shaders.spv"));
 
-    let mut scene = Scene::default();
-    let loader = loaders::GltfLoader::default();
-    loader.append("assets/cornell-box.gltf", &mut scene);
-
-    let mut graph = RenderGraph::new();
-
-    // scene.update(device, &mut cache, &mut graph);
-
-    integrator.render(&mut scene, uvec2(4, 4));
-
-    graph.resolve();
-    unsafe { device.device_wait_idle().unwrap() };
+    //     let sc13 = EventLoop::new()
+    //         .debug(true)
+    //         .ray_tracing(true)
+    //         .build()
+    //         .unwrap();
+    //     let device = &sc13.device;
+    //     let mut cache = HashPool::new(device);
+    //
+    //     let integrator = WavefrontPathIntegrator::new(device);
+    //
+    //     let mut scene = Scene::default();
+    //     let loader = loaders::GltfLoader::default();
+    //     loader.append("assets/cornell-box.gltf", &mut scene);
+    //
+    //     let mut graph = RenderGraph::new();
+    //
+    //     // scene.update(device, &mut cache, &mut graph);
+    //
+    //     integrator.render(&mut scene, uvec2(4, 4));
+    //
+    //     graph.resolve();
+    //     unsafe { device.device_wait_idle().unwrap() };
 }

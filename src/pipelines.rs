@@ -4,7 +4,7 @@ use crate::sbt::{SbtBuffer, SbtBufferInfo};
 use std::ops::Deref;
 use std::sync::Arc;
 
-const SHADERS: &[u8] = include_bytes!(env!("rust_shaders.spv"));
+pub const SHADERS: &[u8] = include_bytes!(env!("rust_shaders.spv"));
 
 pub struct RTPipeline {
     pub sbt: SbtBuffer,

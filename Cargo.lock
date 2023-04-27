@@ -2085,7 +2085,7 @@ dependencies = [
  "parking_lot",
  "paste",
  "raw-window-handle 0.5.2",
- "spirq",
+ "spirq 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "vk-sync-fork",
  "winit",
 ]
@@ -2277,6 +2277,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "spirq"
+version = "0.6.3"
+source = "git+https://github.com/PENGUINLIONG/spirq-rs.git#f77af02d2f26c47bccebfc23df1460f6ae7affb4"
+dependencies = [
+ "fnv",
+ "num-derive",
+ "num-traits",
+ "spirv",
+]
+
+[[package]]
 name = "spirt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2444,6 +2455,7 @@ dependencies = [
  "screen-13-egui",
  "screen-13-fx",
  "shaderc",
+ "spirq 0.6.3 (git+https://github.com/PENGUINLIONG/spirq-rs.git)",
  "spirv-builder",
  "tobj",
  "winit",

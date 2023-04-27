@@ -16,9 +16,9 @@ pub struct RayPayload {
 pub fn generate_camera_rays(
     #[spirv(global_invocation_id)] pos: glam::UVec3,
     #[spirv(num_workgroups)] size: glam::UVec3,
-    // #[spirv(push_constant)] pc: &GenerateCameraRaysPc,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] cameras: &[Camera],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] cameras: &[Camera],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &mut WorkQueue<WorkItem<Ray3f>>,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] test: &[i32],
 ) {
     assert!(pos.x < size.x);
     assert!(pos.y < size.y);
@@ -29,6 +29,7 @@ pub fn generate_camera_rays(
 
     let sample_pos = pos.as_vec3().xy() / size.as_vec3().xy();
 
+    // cameras[0].near_clip = 0.5;
     let camera = cameras[0];
 
     let view2camera = camera.to_view().inverse();
@@ -48,23 +49,24 @@ pub fn generate_camera_rays(
         d: d.extend(1.),
         tmin: 0.001,
         tmax: 10000.,
-        t: 0.,
+        t: test[0] as f32,
     };
     rays.set(WorkItem { item: ray, idx }, idx, wavefront_size);
+
     // rays.push(WorkItem { item: ray, idx });
 }
 
-// #[spirv(ray_generation)]
-// pub fn intersect_closest(
-//     #[spirv(launch_id)] pos: UVec3,
-//     #[spirv(launch_size)] size: UVec3,
-//     #[spirv(uniform_constant, descriptor_set = 0, binding = 0)] accel: &AccelerationStructure,
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] ray_items: &[WorkItem<Ray3f>],
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] surface_interactions: &mut WorkQueue<
-//         Ray3f,
-//     >,
-// ) {
-// }
+#[spirv(ray_generation)]
+pub fn intersect_closest(
+    #[spirv(launch_id)] pos: UVec3,
+    #[spirv(launch_size)] size: UVec3,
+    #[spirv(uniform_constant, descriptor_set = 1, binding = 0)] accel: &AccelerationStructure,
+    #[spirv(storage_buffer, descriptor_set = 1, binding = 1)] ray_items: &[WorkItem<Ray3f>],
+    #[spirv(storage_buffer, descriptor_set = 1, binding = 2)] surface_interactions: &mut WorkQueue<
+        Ray3f,
+    >,
+) {
+}
 //
 // #[spirv(ray_generation)]
 // pub fn path_trace(
@@ -104,16 +106,16 @@ pub fn generate_camera_rays(
 //     unsafe { color.write(pos.xy().as_ivec2().as_uvec2(), vec4(1., 0., 0., 0.)) };
 // }
 //
-// #[spirv(closest_hit)]
-// #[allow(unused_variables)]
-// pub fn rchit(
-//     #[spirv(incoming_ray_payload)] payload: &mut RayPayload,
-//     #[spirv(hit_attribute)] hit_co: &mut Vec2,
-// ) {
-// }
+#[spirv(closest_hit)]
+#[allow(unused_variables)]
+pub fn rchit(
+    #[spirv(incoming_ray_payload)] payload: &mut RayPayload,
+    #[spirv(hit_attribute)] hit_co: &mut Vec2,
+) {
+}
 //
-// #[spirv(miss)]
-// pub fn rmiss(#[spirv(incoming_ray_payload)] payload: &mut RayPayload) {}
+#[spirv(miss)]
+pub fn rmiss(#[spirv(incoming_ray_payload)] payload: &mut RayPayload) {}
 //
-// #[spirv(miss)]
-// pub fn rmiss_shadow(#[spirv(incoming_ray_payload)] payload: &mut RayPayload) {}
+#[spirv(miss)]
+pub fn rmiss_shadow(#[spirv(incoming_ray_payload)] payload: &mut RayPayload) {}
