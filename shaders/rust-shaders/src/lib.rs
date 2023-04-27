@@ -17,7 +17,7 @@ pub struct RayPayload {
     dist: f32,
 }
 
-#[spirv(compute(threads(64)))]
+#[spirv(compute(threads(64, 64, 1)))]
 pub fn generate_camera_rays(
     #[spirv(global_invocation_id)] pos: glam::UVec3,
     #[spirv(num_workgroups)] size: glam::UVec3,
@@ -63,8 +63,33 @@ pub fn generate_camera_rays(
         idx,
         wavefront_size,
     );
+}
 
-    // rays.push(WorkItem { item: ray, idx });
+#[spirv(compute(threads(64, 1, 1)))]
+pub fn update_film(
+    #[spirv(global_invocation_id)] pos: glam::UVec3,
+    #[spirv(num_workgroups)] size: glam::UVec3,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] current_state: &mut WorkQueue<
+        WorkItem<LoopState>,
+    >,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] next_state: &mut WorkQueue<
+        WorkItem<LoopState>,
+    >,
+    #[spirv(uniform_constant, descriptor_set = 0, binding = 2)] image: &mut Image!(
+        2D,
+        format = rgba32f,
+        sampled = false
+    ),
+) {
+    assert!(pos.x < size.x);
+    assert!(pos.y < size.y);
+    assert!(pos.z < size.z);
+
+    let WorkItem { item: state, idx } = *current_state.item(pos.x);
+
+    next_state.push(WorkItem { item: state, idx });
+
+    unsafe { image.write(idx, state.L) };
 }
 
 #[spirv(ray_generation)]
@@ -105,6 +130,8 @@ pub fn intersect_closest(
                 p: (ray.o.xyz() + ray.d.xyz() * payload.dist).extend(1.),
                 dist: payload.dist,
                 t: ray.t,
+                instance: payload.instance,
+                primitive: payload.primitive,
             },
         });
     }

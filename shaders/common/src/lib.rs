@@ -164,6 +164,16 @@ pub struct SurfaceInteraction {
     pub p: Vec4,
     pub dist: f32,
     pub t: f32,
+    pub instance: u32,
+    pub primitive: u32,
+}
+
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct LoopState {
+    pub L: Vec4,
+    pub f: Vec4,
 }
 
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
