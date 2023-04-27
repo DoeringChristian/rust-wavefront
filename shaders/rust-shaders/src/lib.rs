@@ -25,6 +25,7 @@ pub fn generate_camera_rays(
     assert!(pos.z < size.z);
 
     let idx = size.x * pos.y + pos.x;
+    let wavefront_size = size.x * size.y;
 
     let sample_pos = pos.as_vec3().xy() / size.as_vec3().xy();
 
@@ -49,14 +50,8 @@ pub fn generate_camera_rays(
         tmax: 10000.,
         t: 0.,
     };
-    // let ray = Ray3f {
-    //     o: vec4(0., 1., 2., 3.),
-    //     d: vec4(1., 2., 3., 4.),
-    //     tmin: 0.,
-    //     tmax: 1.,
-    //     t: 2.,
-    // };
-    rays.push(WorkItem { item: ray, idx });
+    rays.set(WorkItem { item: ray, idx }, idx, wavefront_size);
+    // rays.push(WorkItem { item: ray, idx });
 }
 
 // #[spirv(ray_generation)]

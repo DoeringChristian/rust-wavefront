@@ -19,6 +19,12 @@ impl<T: Copy> WorkQueue<T> {
             *self.items.index_mut(i as usize) = item;
         }
     }
+    pub fn set(&mut self, item: T, idx: u32, len: u32) {
+        assert!(len <= self.cap);
+        self.len = len;
+        assert!(idx < self.len);
+        unsafe { *self.items.index_mut(idx as usize) = item };
+    }
     pub fn item(&self, idx: u32) -> &T {
         unsafe {
             assert!(idx < self.len);
