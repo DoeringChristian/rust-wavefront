@@ -35,7 +35,7 @@ pub struct RTPipeline {
 }
 
 impl RTPipeline {
-    pub fn new(device: &Arc<Device>, rgen: &str) -> Self {
+    pub fn new(device: &Arc<Device>, rgen: &str, rchit: &str, rmiss: &str) -> Self {
         let ppl = Arc::new(
             RayTracePipeline::create(
                 device,
@@ -46,13 +46,13 @@ impl RTPipeline {
                     Shader::new_ray_gen(load_spv(rgen)).entry_name(rgen.into()),
                     Shader::new_closest_hit(load_spv("rchit")).entry_name("rchit".into()),
                     Shader::new_miss(load_spv("rmiss")).entry_name("rmiss".into()),
-                    Shader::new_miss(load_spv("rmiss_shadow")).entry_name("rmiss_shadow".into()),
+                    // Shader::new_miss(load_spv("rmiss_shadow")).entry_name("rmiss_shadow".into()),
                 ],
                 [
                     RayTraceShaderGroup::new_general(0),
                     RayTraceShaderGroup::new_triangles(1, None),
                     RayTraceShaderGroup::new_general(2),
-                    RayTraceShaderGroup::new_general(3),
+                    // RayTraceShaderGroup::new_general(3),
                 ],
             )
             .unwrap(),
@@ -60,11 +60,14 @@ impl RTPipeline {
         let sbt_info = SbtBufferInfo {
             rgen_index: 0,
             hit_indices: &[1],
-            miss_indices: &[2, 3],
+            miss_indices: &[2],
             callable_indices: &[],
         };
         let sbt = SbtBuffer::create(device, sbt_info, &ppl).unwrap();
         Self { sbt, ppl }
+    }
+    pub fn ppl(&self) -> &Arc<RayTracePipeline> {
+        &self.ppl
     }
 }
 
@@ -79,6 +82,9 @@ impl CPipeline {
             )
             .unwrap(),
         ))
+    }
+    pub fn ppl(&self) -> &Arc<ComputePipeline> {
+        &self.0
     }
 }
 impl Deref for CPipeline {

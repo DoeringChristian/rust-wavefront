@@ -8,7 +8,7 @@ use spirv_std::{glam::*, RuntimeArray};
 #[repr(C)]
 pub struct WorkItem<T: Copy> {
     pub item: T,
-    pub idx: u32,
+    pub idx: UVec2, // Position of the original pixel
 }
 
 #[derive(Clone, Copy)]

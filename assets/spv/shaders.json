@@ -1,9 +1,9 @@
 {
   "entry_to_module": {
-    "rchit": "rchit.spv",
     "rmiss": "rmiss.spv",
-    "intersect_closest": "intersect_closest.spv",
     "rmiss_shadow": "rmiss_shadow.spv",
+    "intersect_closest": "intersect_closest.spv",
+    "rchit": "rchit.spv",
     "generate_camera_rays": "generate_camera_rays.spv"
   }
 }

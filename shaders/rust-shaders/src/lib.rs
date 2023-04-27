@@ -4,12 +4,17 @@ use common::workqueue::WorkQueue;
 use common::*;
 use spirv_std::arch::atomic_i_add;
 use spirv_std::glam::*;
-use spirv_std::ray_tracing::AccelerationStructure;
+use spirv_std::ray_tracing::{AccelerationStructure, RayFlags};
 use spirv_std::*;
 
+#[derive(Default)]
 #[repr(C)]
 pub struct RayPayload {
-    p: Vec3,
+    valid: u32,
+    uv: Vec2,
+    instance: u32,
+    primitive: u32,
+    dist: f32,
 }
 
 #[spirv(compute(threads(64)))]
@@ -50,67 +55,74 @@ pub fn generate_camera_rays(
         tmax: 10000.,
         t: 0.,
     };
-    rays.set(WorkItem { item: ray, idx }, idx, wavefront_size);
+    rays.set(
+        WorkItem {
+            item: ray,
+            idx: pos.xy(),
+        },
+        idx,
+        wavefront_size,
+    );
 
     // rays.push(WorkItem { item: ray, idx });
 }
 
 #[spirv(ray_generation)]
 pub fn intersect_closest(
+    #[spirv(ray_payload)] payload: &mut RayPayload,
     #[spirv(launch_id)] pos: UVec3,
     #[spirv(launch_size)] size: UVec3,
-    #[spirv(uniform_constant, descriptor_set = 1, binding = 0)] accel: &AccelerationStructure,
-    #[spirv(storage_buffer, descriptor_set = 1, binding = 1)] ray_items: &[WorkItem<Ray3f>],
-    #[spirv(storage_buffer, descriptor_set = 1, binding = 2)] surface_interactions: &mut WorkQueue<
-        Ray3f,
+    #[spirv(uniform_constant, descriptor_set = 0, binding = 0)] accel: &AccelerationStructure,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &WorkQueue<WorkItem<Ray3f>>,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] surface_interactions: &mut WorkQueue<
+        WorkItem<SurfaceInteraction>,
     >,
 ) {
+    assert!(pos.x < size.x);
+    assert!(pos.y < size.y);
+    assert!(pos.z < size.z);
+    let WorkItem { item: ray, idx } = *rays.item(pos.x);
+
+    unsafe {
+        accel.trace_ray(
+            RayFlags::OPAQUE,
+            0xff,
+            0,
+            0,
+            0,
+            ray.o.xyz(),
+            ray.tmin,
+            ray.d.xyz(),
+            ray.tmax,
+            payload,
+        )
+    };
+
+    if payload.valid != 0 {
+        surface_interactions.push(WorkItem {
+            idx,
+            item: SurfaceInteraction {
+                p: (ray.o.xyz() + ray.d.xyz() * payload.dist).extend(1.),
+                dist: payload.dist,
+                t: ray.t,
+            },
+        });
+    }
 }
-//
-// #[spirv(ray_generation)]
-// pub fn path_trace(
-//     #[spirv(launch_id)] pos: UVec3,
-//     #[spirv(launch_size)] size: UVec3,
-//     // #[spirv(push_constant)] push_constant: &PathTracePushConstant,
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] indices: &[u32],
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] positions: &[Vec3],
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] normals: &[Vec3],
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] uvs: &[Vec2],
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] instances: &[Instance],
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 5)] meshes: &[Mesh],
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 6)] emitters: &[Emitter],
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 7)] materials: &[Material],
-//     #[spirv(storage_buffer, descriptor_set = 0, binding = 8)] cammeras: &[Camera],
-//     #[spirv(uniform_constant, descriptor_set = 0, binding = 10)] accel: &AccelerationStructure,
-//     // #[spirv(uniform_constant, descriptor_set = 0, binding = 9)] textures: &RuntimeArray<
-//     //     Image!(2D, format = rgba32f, sampled = false),
-//     // >,
-//     #[spirv(uniform_constant, descriptor_set = 1, binding = 0)] color: &Image!(
-//         2D,
-//         format = rgba32f,
-//         sampled = false
-//     ),
-//     #[spirv(uniform_constant, descriptor_set = 1, binding = 1)] normal: &Image!(
-//         2D,
-//         format = rgba32f,
-//         sampled = false
-//     ),
-//     #[spirv(uniform_constant, descriptor_set = 1, binding = 2)] position: &Image!(
-//         2D,
-//         format = rgba32f,
-//         sampled = false
-//     ),
-// ) {
-//     let idx = size.x * pos.y + pos.x;
-//     unsafe { color.write(pos.xy().as_ivec2().as_uvec2(), vec4(1., 0., 0., 0.)) };
-// }
-//
 #[spirv(closest_hit)]
 #[allow(unused_variables)]
 pub fn rchit(
     #[spirv(incoming_ray_payload)] payload: &mut RayPayload,
     #[spirv(hit_attribute)] hit_co: &mut Vec2,
+    #[spirv(instance_id)] instance: u32,
+    #[spirv(primitive_id)] primitive: u32,
+    #[spirv(ray_tmax)] dist: f32,
 ) {
+    payload.uv = *hit_co;
+    payload.valid = 1;
+    payload.instance = instance;
+    payload.primitive = primitive;
+    payload.dist = dist;
 }
 //
 #[spirv(miss)]

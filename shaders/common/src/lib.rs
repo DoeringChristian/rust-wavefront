@@ -148,16 +148,6 @@ impl Camera {
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
 #[derive(Clone, Copy)]
-#[repr(C)]
-struct PushConstant {
-    pub camera: u32,
-    pub max_depth: u32,
-    pub rr_depth: u32,
-    pub seed: u32,
-}
-
-#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
-#[derive(Clone, Copy)]
 #[repr(C, align(16))]
 pub struct Ray3f {
     pub o: Vec4,
@@ -167,8 +157,27 @@ pub struct Ray3f {
     pub t: f32,
 }
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct SurfaceInteraction {
+    pub p: Vec4,
+    pub dist: f32,
+    pub t: f32,
+}
+
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 #[repr(C)]
 pub struct GenerateCameraRaysPc {
     pub camera: u32,
+}
+
+#[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
+#[derive(Clone, Copy)]
+#[repr(C)]
+struct PushConstant {
+    pub camera: u32,
+    pub max_depth: u32,
+    pub rr_depth: u32,
+    pub seed: u32,
 }
