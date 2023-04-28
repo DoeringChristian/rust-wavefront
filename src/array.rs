@@ -48,6 +48,13 @@ impl<T: Sized + Copy> Array<T> {
     pub fn storage(device: &Arc<Device>, data: &[T]) -> Self {
         Self::from_slice(device, vk::BufferUsageFlags::STORAGE_BUFFER, data)
     }
+    pub fn empty(device: &Arc<Device>, num: usize) -> Self {
+        Self::uninitialized(
+            device,
+            vk::BufferUsageFlags::STORAGE_BUFFER | vk::BufferUsageFlags::TRANSFER_DST,
+            num,
+        )
+    }
     pub fn uninitialized(device: &Arc<Device>, usage: vk::BufferUsageFlags, count: usize) -> Self {
         let stride = std::mem::size_of::<T>();
 

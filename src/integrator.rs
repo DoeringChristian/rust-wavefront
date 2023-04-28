@@ -26,10 +26,12 @@ impl WavefrontPathIntegrator {
         &self,
         scene: SceneBinding,
         graph: &mut RenderGraph,
-        rays: &ItemWorkQueue<Ray3f>,
+        rays: &WorkQueue<RayWorkItem>,
+        pixel_states: &Array<PixelSampleState>,
         size: UVec2,
     ) {
         let rays = graph.bind_node(rays.buf());
+        let pixel_states = graph.bind_node(pixel_states.buf());
         // let counter_node = graph.bind_node(rays.counter.buf());
 
         let pc = GenerateCameraRaysPc { camera: 0 };
@@ -39,6 +41,7 @@ impl WavefrontPathIntegrator {
             .bind_pipeline(&*self.generate_camera_rays_ppl)
             .read_descriptor((0, 0), scene.cameras)
             .write_descriptor((0, 1), rays)
+            .write_descriptor((0, 2), pixel_states)
             .record_compute(move |comp, _| {
                 // comp.push_constants(bytemuck::cast_slice(&[pc]));
                 comp.dispatch(size.x, size.y, 1);
@@ -49,12 +52,12 @@ impl WavefrontPathIntegrator {
         &self,
         scene: &SceneBinding,
         graph: &mut RenderGraph,
-        rays: &ItemWorkQueue<Ray3f>,
-        surface_interactions: &ItemWorkQueue<SurfaceInteraction>,
+        rays: &WorkQueue<RayWorkItem>,
+        surface_interactions: &WorkQueue<MaterialEvalWorkItem>,
     ) {
         let size = rays.len();
         let rays = graph.bind_node(rays.buf());
-        let surface_interactions = graph.bind_node(surface_interactions.buf());
+        let material_eval_queue = graph.bind_node(surface_interactions.buf());
 
         let sbt_rgen = self.intersect_closest_ppl.sbt.rgen();
         let sbt_miss = self.intersect_closest_ppl.sbt.miss();
@@ -66,7 +69,7 @@ impl WavefrontPathIntegrator {
             .bind_pipeline(self.intersect_closest_ppl.ppl())
             .read_descriptor((0, 0), scene.accel)
             .read_descriptor((0, 1), rays)
-            .write_descriptor((0, 2), surface_interactions)
+            .write_descriptor((0, 2), material_eval_queue)
             .record_ray_trace(move |rt, _| {
                 rt.trace_rays(
                     &sbt_rgen,
@@ -86,25 +89,29 @@ impl WavefrontPathIntegrator {
 
         scene.update(&self.device, &mut cache, &mut graph);
 
-        let scene_bindings = scene.bind(&mut graph);
-        let rays = ItemWorkQueue::new(&self.device, (size.x * size.y) as _);
-        let surface_interactions = ItemWorkQueue::new(&self.device, (size.x * size.y) as _);
+        let wavefront_size = (size.x * size.y) as usize;
 
-        self.generate_camera_rays(scene_bindings, &mut graph, &rays, size);
+        let scene_bindings = scene.bind(&mut graph);
+        let current = WorkQueue::new(&self.device, wavefront_size);
+        // let next = WorkQueue::new(&self.device, wavefront_size);
+        let pixel_states = Array::empty(&self.device, wavefront_size);
+        let material_eval_queue = WorkQueue::new(&self.device, wavefront_size);
+
+        self.generate_camera_rays(scene_bindings, &mut graph, &current, &pixel_states, size);
 
         graph.resolve().submit(&mut cache, 0).unwrap();
         unsafe { self.device.device_wait_idle().unwrap() };
         let mut graph = RenderGraph::new();
         let scene_bindings = scene.bind(&mut graph);
 
-        self.intersect_closest(&scene_bindings, &mut graph, &rays, &surface_interactions);
+        self.intersect_closest(&scene_bindings, &mut graph, &current, &material_eval_queue);
 
         graph.resolve().submit(&mut cache, 0).unwrap();
         unsafe { self.device.device_wait_idle().unwrap() };
         // let mut graph = RenderGraph::new();
         // let scene_bindings = scene.bind(&mut graph);
 
-        dbg!(surface_interactions.items());
-        dbg!(surface_interactions.len());
+        dbg!(material_eval_queue.items());
+        dbg!(material_eval_queue.len());
     }
 }

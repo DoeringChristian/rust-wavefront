@@ -22,7 +22,9 @@ pub fn generate_camera_rays(
     #[spirv(global_invocation_id)] pos: glam::UVec3,
     #[spirv(num_workgroups)] size: glam::UVec3,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] cameras: &[Camera],
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &mut WorkQueue<WorkItem<Ray3f>>,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &mut WorkQueue<RayWorkItem>,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)]
+    pixel_sample_states: &mut [PixelSampleState],
 ) {
     assert!(pos.x < size.x);
     assert!(pos.y < size.y);
@@ -56,13 +58,18 @@ pub fn generate_camera_rays(
         t: 0.,
     };
     rays.set(
-        WorkItem {
-            item: ray,
-            idx: pos.xy(),
+        RayWorkItem {
+            ray,
+            beta: vec4(1., 1., 1., 1.),
+            pixel_idx: idx,
         },
         idx,
         wavefront_size,
     );
+    pixel_sample_states[idx as usize] = PixelSampleState {
+        pixel: pos.xy(),
+        radiance: Vec4::default(),
+    };
 }
 
 #[spirv(compute(threads(64, 1, 1)))]
@@ -98,15 +105,23 @@ pub fn intersect_closest(
     #[spirv(launch_id)] pos: UVec3,
     #[spirv(launch_size)] size: UVec3,
     #[spirv(uniform_constant, descriptor_set = 0, binding = 0)] accel: &AccelerationStructure,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &WorkQueue<WorkItem<Ray3f>>,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] surface_interactions: &mut WorkQueue<
-        WorkItem<SurfaceInteraction>,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &WorkQueue<RayWorkItem>,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] material_eval_queue: &mut WorkQueue<
+        MaterialEvalWorkItem,
     >,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] instances: &[Instance],
 ) {
     assert!(pos.x < size.x);
     assert!(pos.y < size.y);
     assert!(pos.z < size.z);
-    let WorkItem { item: ray, idx } = *rays.item(pos.x);
+    // let WorkItem { item: ray, idx } = *rays.item(pos.x);
+    let RayWorkItem {
+        ray,
+        beta,
+        pixel_idx,
+    } = *rays.item(pos.x);
+
+    *payload = RayPayload::default();
 
     unsafe {
         accel.trace_ray(
@@ -124,14 +139,16 @@ pub fn intersect_closest(
     };
 
     if payload.valid != 0 {
-        surface_interactions.push(WorkItem {
-            idx,
-            item: SurfaceInteraction {
+        let material = instances[payload.instance as usize].material;
+        material_eval_queue.push(MaterialEvalWorkItem {
+            pixel_idx,
+            si: SurfaceInteraction {
                 p: (ray.o.xyz() + ray.d.xyz() * payload.dist).extend(1.),
                 dist: payload.dist,
                 t: ray.t,
                 instance: payload.instance,
                 primitive: payload.primitive,
+                material,
             },
         });
     }

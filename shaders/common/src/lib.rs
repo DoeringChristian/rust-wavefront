@@ -166,6 +166,7 @@ pub struct SurfaceInteraction {
     pub t: f32,
     pub instance: u32,
     pub primitive: u32,
+    pub material: u32,
 }
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
