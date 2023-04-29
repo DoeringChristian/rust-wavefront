@@ -49,11 +49,24 @@ impl<T: Sized + Copy> Array<T> {
         Self::from_slice(device, vk::BufferUsageFlags::STORAGE_BUFFER, data)
     }
     pub fn empty(device: &Arc<Device>, num: usize) -> Self {
-        Self::uninitialized(
-            device,
-            vk::BufferUsageFlags::STORAGE_BUFFER | vk::BufferUsageFlags::TRANSFER_DST,
-            num,
-        )
+        let stride = std::mem::size_of::<T>();
+
+        let buf = Arc::new(
+            Buffer::create(
+                device,
+                BufferInfo::new_mappable(
+                    (stride * num) as _,
+                    vk::BufferUsageFlags::STORAGE_BUFFER | vk::BufferUsageFlags::TRANSFER_DST,
+                ),
+            )
+            .unwrap(),
+        );
+        Self {
+            buf,
+            stride,
+            count: num,
+            _ty: PhantomData,
+        }
     }
     pub fn uninitialized(device: &Arc<Device>, usage: vk::BufferUsageFlags, count: usize) -> Self {
         let stride = std::mem::size_of::<T>();
@@ -155,6 +168,13 @@ impl<T: Sized + Copy> Array<T> {
     }
     pub fn buf(&self) -> &Arc<Buffer> {
         &self.buf
+    }
+    pub fn map(&self) -> &[T] {
+        let slice = Buffer::mapped_slice(&self.buf);
+        unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const _, self.count()) }
+    }
+    pub fn map_u8(&self) -> &[u8] {
+        Buffer::mapped_slice(&self.buf)
     }
 }
 impl<T> Deref for Array<T> {

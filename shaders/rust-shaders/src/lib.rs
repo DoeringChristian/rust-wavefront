@@ -17,7 +17,7 @@ pub struct RayPayload {
     dist: f32,
 }
 
-#[spirv(compute(threads(64, 64, 1)))]
+#[spirv(compute(threads(64)))]
 pub fn generate_camera_rays(
     #[spirv(global_invocation_id)] pos: glam::UVec3,
     #[spirv(num_workgroups)] size: glam::UVec3,
@@ -60,7 +60,7 @@ pub fn generate_camera_rays(
     rays.set(
         RayWorkItem {
             ray,
-            beta: vec4(1., 1., 1., 1.),
+            throughput: vec4(1., 1., 1., 1.),
             pixel_idx: idx,
         },
         idx,
@@ -68,21 +68,17 @@ pub fn generate_camera_rays(
     );
     pixel_sample_states[idx as usize] = PixelSampleState {
         pixel: pos.xy(),
-        radiance: Vec4::default(),
+        radiance: vec4(1., 0., 0., 0.),
     };
 }
 
-#[spirv(compute(threads(64, 1, 1)))]
+#[spirv(compute(threads(64)))]
 pub fn update_film(
     #[spirv(global_invocation_id)] pos: glam::UVec3,
     #[spirv(num_workgroups)] size: glam::UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] current_state: &mut WorkQueue<
-        WorkItem<LoopState>,
-    >,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] next_state: &mut WorkQueue<
-        WorkItem<LoopState>,
-    >,
-    #[spirv(uniform_constant, descriptor_set = 0, binding = 2)] image: &mut Image!(
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)]
+    pixel_sample_states: &[PixelSampleState],
+    #[spirv(uniform_constant, descriptor_set = 0, binding = 1)] image: &Image!(
         2D,
         format = rgba32f,
         sampled = false
@@ -92,11 +88,12 @@ pub fn update_film(
     assert!(pos.y < size.y);
     assert!(pos.z < size.z);
 
-    let WorkItem { item: state, idx } = *current_state.item(pos.x);
+    let idx = size.x * pos.y + pos.x;
+    let wavefront_size = size.x * size.y;
 
-    next_state.push(WorkItem { item: state, idx });
+    let PixelSampleState { pixel, radiance } = pixel_sample_states[idx as usize];
 
-    unsafe { image.write(idx, state.L) };
+    unsafe { image.write(pixel, radiance.xyz().extend(1.)) };
 }
 
 #[spirv(ray_generation)]
@@ -117,7 +114,7 @@ pub fn intersect_closest(
     // let WorkItem { item: ray, idx } = *rays.item(pos.x);
     let RayWorkItem {
         ray,
-        beta,
+        throughput,
         pixel_idx,
     } = *rays.item(pos.x);
 

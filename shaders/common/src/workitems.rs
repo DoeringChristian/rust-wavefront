@@ -26,7 +26,7 @@ pub struct PixelSampleState {
 #[repr(C)]
 pub struct RayWorkItem {
     pub ray: Ray3f,
-    pub beta: Vec4,
+    pub throughput: Vec4,
     pub pixel_idx: u32,
 }
 
