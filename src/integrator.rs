@@ -159,8 +159,6 @@ impl WavefrontPathIntegrator {
         let mut graph = RenderGraph::new();
         let scene_bindings = scene.bind(&mut graph);
 
-        dbg!(img_buf.map());
-
         image::save_buffer(
             "out/img.exr",
             img_buf.map_u8(),

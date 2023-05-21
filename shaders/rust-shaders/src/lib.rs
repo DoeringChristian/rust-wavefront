@@ -96,6 +96,21 @@ pub fn update_film(
     unsafe { image.write(pixel, radiance.xyz().extend(1.)) };
 }
 
+#[spirv(compute(threads(64)))]
+pub fn sample_bsdf(
+    #[spirv(global_invocation_id)] pos: glam::UVec3,
+    #[spirv(num_workgroups)] size: glam::UVec3,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] input: &mut WorkQueue<
+        MaterialEvalWorkItem,
+    >,
+    #[spirv(push_constant)] material: u32,
+) {
+    assert!(pos.x < size.x);
+    assert!(pos.y < size.y);
+    assert!(pos.z < size.z);
+    todo!()
+}
+
 #[spirv(ray_generation)]
 pub fn intersect_closest(
     #[spirv(ray_payload)] payload: &mut RayPayload,
