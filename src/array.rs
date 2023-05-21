@@ -27,6 +27,10 @@ impl<T> Array<T> {
         self.count
     }
     #[inline]
+    pub fn len(&self) -> usize {
+        self.count()
+    }
+    #[inline]
     pub fn stride(&self) -> usize {
         self.stride
     }

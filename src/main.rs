@@ -36,7 +36,7 @@ fn main() {
 
     // scene.update(device, &mut cache, &mut graph);
 
-    integrator.render(&mut scene, uvec2(4, 4));
+    integrator.render(&mut scene, uvec2(128, 128));
 
     graph.resolve();
     unsafe { device.device_wait_idle().unwrap() };

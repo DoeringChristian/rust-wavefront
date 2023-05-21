@@ -22,15 +22,16 @@ pub fn generate_camera_rays(
     #[spirv(global_invocation_id)] pos: glam::UVec3,
     #[spirv(num_workgroups)] size: glam::UVec3,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] cameras: &[Camera],
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &mut WorkQueue<RayWorkItem>,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)]
-    pixel_sample_states: &mut [PixelSampleState],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &mut [Ray3f],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] spos: &mut [Vec2],
+    // #[spirv(storage_buffer, descriptor_set = 0, binding = 2)]
+    // pixel_sample_states: &mut [PixelSampleState],
 ) {
+    let idx = (size.x * pos.y + pos.x) as usize;
     assert!(pos.x < size.x);
     assert!(pos.y < size.y);
     assert!(pos.z < size.z);
 
-    let idx = size.x * pos.y + pos.x;
     let wavefront_size = size.x * size.y;
 
     let sample_pos = pos.as_vec3().xy() / size.as_vec3().xy();
@@ -50,65 +51,64 @@ pub fn generate_camera_rays(
 
     let d = -(camera.to_world() * d.extend(0.)).xyz().normalize();
 
-    let ray = Ray3f {
+    rays[idx] = Ray3f {
         o: o.extend(1.),
         d: d.extend(1.),
         tmin: 0.001,
         tmax: 10000.,
         t: 0.,
     };
-    rays.set(
-        RayWorkItem {
-            ray,
-            throughput: vec4(1., 1., 1., 1.),
-            pixel_idx: idx,
-        },
-        idx,
-        wavefront_size,
-    );
-    pixel_sample_states[idx as usize] = PixelSampleState {
-        pixel: pos.xy(),
-        radiance: vec4(1., 0., 0., 0.),
-    };
+    spos[idx] = pos.xy().as_vec2();
 }
 
 #[spirv(compute(threads(64)))]
-pub fn update_film(
+pub fn put_film(
     #[spirv(global_invocation_id)] pos: glam::UVec3,
     #[spirv(num_workgroups)] size: glam::UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)]
-    pixel_sample_states: &[PixelSampleState],
-    #[spirv(uniform_constant, descriptor_set = 0, binding = 1)] image: &Image!(
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] sample: &[Vec4],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] sample_pos: &[Vec2],
+    #[spirv(uniform_constant, descriptor_set = 0, binding = 2)] image: &Image!(
         2D,
         format = rgba32f,
         sampled = false
     ),
+    // #[spirv(push_constant)] image_size: &[u32; 2],
 ) {
+    let idx = (pos.x) as usize;
     assert!(pos.x < size.x);
     assert!(pos.y < size.y);
     assert!(pos.z < size.z);
 
-    let idx = size.x * pos.y + pos.x;
-    let wavefront_size = size.x * size.y;
+    // let wavefront_size = size.x * size.y;
+    // let img_size: UVec2 = image.query_size();
 
-    let PixelSampleState { pixel, radiance } = pixel_sample_states[idx as usize];
-
-    unsafe { image.write(pixel, radiance.xyz().extend(1.)) };
+    unsafe { image.write((sample_pos[idx]).as_uvec2(), sample[idx].xyz().extend(1.)) };
 }
 
 #[spirv(compute(threads(64)))]
-pub fn sample_bsdf(
+pub fn smaple_bsdf(
     #[spirv(global_invocation_id)] pos: glam::UVec3,
     #[spirv(num_workgroups)] size: glam::UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] input: &mut WorkQueue<
-        MaterialEvalWorkItem,
-    >,
-    #[spirv(push_constant)] material: u32,
 ) {
+    let idx = (size.x * pos.y + pos.x) as usize;
     assert!(pos.x < size.x);
     assert!(pos.y < size.y);
     assert!(pos.z < size.z);
-    todo!()
+}
+
+#[spirv(compute(threads(64)))]
+pub fn update_state(
+    #[spirv(global_invocation_id)] pos: glam::UVec3,
+    #[spirv(num_workgroups)] size: glam::UVec3,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] L: &mut [Vec4],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] si: &mut [SurfaceInteraction],
+) {
+    let idx = (pos.x) as usize;
+    assert!(pos.x < size.x);
+    assert!(pos.y < size.y);
+    assert!(pos.z < size.z);
+
+    L[idx] = vec4(si[idx].dist / 10., 0., 0., 1.);
 }
 
 #[spirv(ray_generation)]
@@ -117,23 +117,17 @@ pub fn intersect_closest(
     #[spirv(launch_id)] pos: UVec3,
     #[spirv(launch_size)] size: UVec3,
     #[spirv(uniform_constant, descriptor_set = 0, binding = 0)] accel: &AccelerationStructure,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &WorkQueue<RayWorkItem>,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] material_eval_queue: &mut WorkQueue<
-        MaterialEvalWorkItem,
-    >,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &[Ray3f],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] si: &mut [SurfaceInteraction],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] instances: &[Instance],
 ) {
+    let idx = pos.x as usize;
     assert!(pos.x < size.x);
     assert!(pos.y < size.y);
     assert!(pos.z < size.z);
-    // let WorkItem { item: ray, idx } = *rays.item(pos.x);
-    let RayWorkItem {
-        ray,
-        throughput,
-        pixel_idx,
-    } = *rays.item(pos.x);
 
     *payload = RayPayload::default();
+    let ray = rays[idx];
 
     unsafe {
         accel.trace_ray(
@@ -150,19 +144,16 @@ pub fn intersect_closest(
         )
     };
 
-    if payload.valid != 0 {
-        let material = instances[payload.instance as usize].material;
-        material_eval_queue.push(MaterialEvalWorkItem {
-            pixel_idx,
-            si: SurfaceInteraction {
-                p: (ray.o.xyz() + ray.d.xyz() * payload.dist).extend(1.),
-                dist: payload.dist,
-                t: ray.t,
-                instance: payload.instance,
-                primitive: payload.primitive,
-                material,
-            },
-        });
+    let instance = instances[payload.instance as usize];
+
+    si[idx] = SurfaceInteraction {
+        p: (ray.o.xyz() + ray.d.xyz() * payload.dist).extend(1.),
+        dist: payload.dist,
+        t: 1.,
+        // t: ray.t,
+        instance: payload.instance,
+        primitive: payload.primitive,
+        material: instance.material,
     }
 }
 #[spirv(closest_hit)]
