@@ -1,6 +1,12 @@
 use crate::pcg::PCG;
 use crate::rand::sample_tea_32;
-use spirv_std::glam;
+use spirv_std::glam::*;
+
+pub trait Sampler {
+    fn seed(&mut self, seed: u32, idx: u32);
+    fn next_1d(&mut self) -> f32;
+    fn next_2d(&mut self) -> Vec2;
+}
 
 #[derive(Clone, Copy, Default)]
 pub struct IndependentSampler {
@@ -22,7 +28,7 @@ impl IndependentSampler {
     pub fn next_1d(&mut self) -> f32 {
         self.pcg.next_f32()
     }
-    pub fn next_2d(&mut self) -> glam::Vec2 {
-        glam::vec2(self.next_1d(), self.next_1d())
+    pub fn next_2d(&mut self) -> Vec2 {
+        vec2(self.next_1d(), self.next_1d())
     }
 }

@@ -1,8 +1,9 @@
 #![no_std]
 
+mod independent;
+
 use common::sampler::IndependentSampler;
 use common::*;
-use spirv_std::arch::atomic_i_add;
 use spirv_std::glam::*;
 use spirv_std::ray_tracing::{AccelerationStructure, RayFlags};
 use spirv_std::*;
@@ -25,8 +26,6 @@ pub fn generate_camera_rays(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &mut [Ray3f],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] _sample_pos: &mut [Vec2],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] _sampler: &mut [IndependentSampler],
-    // #[spirv(storage_buffer, descriptor_set = 0, binding = 2)]
-    // pixel_sample_states: &mut [PixelSampleState],
 ) {
     let idx = (size.x * pos.y + pos.x) as usize;
     assert!(pos.x < size.x);

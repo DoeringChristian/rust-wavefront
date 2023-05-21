@@ -39,6 +39,7 @@ fn main() {
             entry_to_module: entry_shader
                 .iter()
                 .map(|(entry, src_file)| {
+                    println!("{entry}");
                     let filename = src_file.file_name().unwrap();
                     let dst_file = _target_spv_dir.join(filename);
 
