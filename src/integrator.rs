@@ -1,3 +1,4 @@
+use common::sampler::IndependentSampler;
 use common::*;
 use glam::*;
 use screen_13::prelude::*;
@@ -6,7 +7,6 @@ use std::sync::Arc;
 use crate::array::Array;
 use crate::pipelines::{CPipeline, RTPipeline};
 use crate::scene::{Scene, SceneBinding};
-use crate::workqueue::{ItemWorkQueue, WorkQueue};
 
 fn buffer_size<T>(num: usize) -> u64 {
     (std::mem::size_of::<T>() * num) as _
@@ -36,6 +36,7 @@ impl WavefrontPathIntegrator {
         scene: &SceneBinding,
         rays: AnyBufferNode,
         sample_pos: AnyBufferNode,
+        sampler: AnyBufferNode,
         size: UVec2,
     ) {
         let pc = GenerateCameraRaysPc { camera: 0 };
@@ -46,6 +47,7 @@ impl WavefrontPathIntegrator {
             .read_descriptor((0, 0), scene.cameras)
             .write_descriptor((0, 1), rays)
             .write_descriptor((0, 2), sample_pos)
+            .write_descriptor((0, 3), sampler)
             .record_compute(move |comp, _| {
                 // comp.push_constants(bytemuck::cast_slice(&[pc]));
                 comp.dispatch(size.x, size.y, 1);
@@ -140,6 +142,9 @@ impl WavefrontPathIntegrator {
         let sample_pos = Array::<Vec2>::empty(&self.device, wavefront_size);
         let sample_pos_node = graph.bind_node(sample_pos.buf());
 
+        let sampler = Array::<IndependentSampler>::empty(&self.device, wavefront_size);
+        let sampler_node = graph.bind_node(sampler.buf());
+
         let si = Array::<SurfaceInteraction>::empty(&self.device, wavefront_size);
         let si_node = graph.bind_node(si.buf());
 
@@ -171,6 +176,7 @@ impl WavefrontPathIntegrator {
             &scene_bindings,
             rays_node.into(),
             sample_pos_node.into(),
+            sampler_node.into(),
             size,
         );
 
@@ -198,9 +204,9 @@ impl WavefrontPathIntegrator {
         graph.resolve().submit(&mut cache, 0).unwrap();
         unsafe { self.device.device_wait_idle().unwrap() };
 
-        println!("{:#?}", rays.map());
-        println!("{:#?}", si.map());
-        println!("{:#?}", L.map());
+        // println!("{:#?}", rays.map());
+        // println!("{:#?}", si.map());
+        // println!("{:#?}", L.map());
 
         image::save_buffer(
             "out/img.exr",

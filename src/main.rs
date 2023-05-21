@@ -6,7 +6,7 @@ mod pipelines;
 // mod renderer;
 mod sbt;
 mod scene;
-mod workqueue;
+// mod workqueue;
 
 use glam::*;
 use screen_13::prelude::*;
