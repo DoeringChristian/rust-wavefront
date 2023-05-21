@@ -1,6 +1,6 @@
 #![no_std]
 
-use common::workqueue::WorkQueue;
+use common::sampler::IndependentSampler;
 use common::*;
 use spirv_std::arch::atomic_i_add;
 use spirv_std::glam::*;
@@ -23,7 +23,8 @@ pub fn generate_camera_rays(
     #[spirv(num_workgroups)] size: glam::UVec3,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] cameras: &[Camera],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] rays: &mut [Ray3f],
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] spos: &mut [Vec2],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] _sample_pos: &mut [Vec2],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] _sampler: &mut [IndependentSampler],
     // #[spirv(storage_buffer, descriptor_set = 0, binding = 2)]
     // pixel_sample_states: &mut [PixelSampleState],
 ) {
@@ -34,7 +35,11 @@ pub fn generate_camera_rays(
 
     let wavefront_size = size.x * size.y;
 
-    let sample_pos = pos.as_vec3().xy() / size.as_vec3().xy();
+    let mut sampler = IndependentSampler::new(0, idx as _);
+
+    // let sample_pos = pos.as_vec3().xy() / size.as_vec3().xy();
+    let sample_pos = (pos.as_vec3().xy() + sampler.next_2d()) / size.as_vec3().xy();
+    // let sample_pos = sample_pos[idx];
 
     // cameras[0].near_clip = 0.5;
     let camera = cameras[0];
@@ -58,7 +63,8 @@ pub fn generate_camera_rays(
         tmax: 10000.,
         t: 0.,
     };
-    spos[idx] = pos.xy().as_vec2();
+    _sample_pos[idx] = pos.xy().as_vec2();
+    _sampler[idx] = sampler;
 }
 
 #[spirv(compute(threads(64)))]

@@ -1,8 +1,9 @@
 #![cfg_attr(target_arch = "spirv", no_std, feature(asm_experimental_arch,))]
 
+pub mod pcg;
+pub mod rand;
+pub mod sampler;
 mod workitems;
-pub mod workqueue;
-pub use workitems::*;
 
 use bytemuck::*;
 use spirv_std::glam::*;

@@ -1,12 +1,12 @@
 {
   "entry_to_module": {
-    "smaple_bsdf": "smaple_bsdf.spv",
-    "generate_camera_rays": "generate_camera_rays.spv",
-    "rchit": "rchit.spv",
-    "put_film": "put_film.spv",
     "intersect_closest": "intersect_closest.spv",
     "rmiss": "rmiss.spv",
+    "rchit": "rchit.spv",
+    "generate_camera_rays": "generate_camera_rays.spv",
+    "smaple_bsdf": "smaple_bsdf.spv",
     "rmiss_shadow": "rmiss_shadow.spv",
+    "put_film": "put_film.spv",
     "update_state": "update_state.spv"
   }
 }
