@@ -1,6 +1,6 @@
 #![no_std]
 
-mod independent;
+pub mod independent;
 
 use common::sampler::IndependentSampler;
 use common::*;
