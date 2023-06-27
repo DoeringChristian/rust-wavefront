@@ -34,9 +34,12 @@ pub trait Film {
         &self,
         graph: &mut RenderGraph,
         cache: &mut HashPool,
+        wavefront_size: usize,
         pos: &AnyBufferNode,
         value: &AnyBufferNode,
     );
+    fn prepare(&mut self, graph: &mut RenderGraph, cache: &mut HashPool);
+    fn develop(&mut self, graph: &mut RenderGraph, cache: &mut HashPool) -> AnyImageNode;
 }
 
 pub trait BSDF {

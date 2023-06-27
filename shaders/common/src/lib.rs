@@ -6,7 +6,7 @@ pub mod sampler;
 mod workitems;
 
 use bytemuck::*;
-use spirv_std::glam::*;
+pub use spirv_std::glam::*;
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Debug))]
 #[derive(Clone, Copy)]

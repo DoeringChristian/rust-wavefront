@@ -1,5 +1,7 @@
 #![no_std]
 
+pub mod bsdf;
+pub mod film;
 pub mod sampler;
 
 use spirv_std::glam::*;

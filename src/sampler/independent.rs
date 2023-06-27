@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::array::Array;
 use crate::pipelines::CPipeline;
 use crate::render::Sampler;
 use screen_13::prelude::*;
@@ -11,7 +10,7 @@ pub struct IndependentSampler {
     seed: CPipeline,
     state: Option<Arc<Lease<Buffer>>>,
     wavefront_size: usize,
-    device: Arc<Device>,
+    // device: Arc<Device>,
 }
 
 impl IndependentSampler {
@@ -22,7 +21,7 @@ impl IndependentSampler {
             seed: CPipeline::new(device, "sampler::independent::seed"),
             state: None,
             wavefront_size: 0,
-            device: device.clone(),
+            // device: device.clone(),
         }
     }
 }
@@ -66,7 +65,7 @@ impl Sampler for IndependentSampler {
 
         let sample = cache
             .lease(BufferInfo::new(
-                (wavefront_size * std::mem::size_of::<glam::Vec2>()) as _,
+                (wavefront_size * std::mem::size_of::<common::Vec2>()) as _,
                 vk::BufferUsageFlags::STORAGE_BUFFER,
             ))
             .unwrap();
@@ -75,8 +74,8 @@ impl Sampler for IndependentSampler {
         let state = graph.bind_node(self.state.as_ref().unwrap());
 
         graph
-            .begin_pass("IndependentSampler::next_1d")
-            .bind_pipeline(self.next_1d.ppl())
+            .begin_pass("IndependentSampler::next_2d")
+            .bind_pipeline(self.next_2d.ppl())
             .write_descriptor((0, 0), state)
             .write_descriptor((0, 1), sample)
             .record_compute(move |comp, _| {
