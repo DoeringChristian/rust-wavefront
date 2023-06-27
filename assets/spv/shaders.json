@@ -1,14 +1,7 @@
 {
   "entry_to_module": {
-    "put_film": "put_film.spv",
-    "rmiss_shadow": "rmiss_shadow.spv",
-    "smaple_bsdf": "smaple_bsdf.spv",
-    "update_state": "update_state.spv",
-    "intersect_closest": "intersect_closest.spv",
-    "independent::IndependentSampler::next_1d": "independent-IndependentSampler-next_1d.spv",
-    "independent::IndependentSampler::next_2d": "independent-IndependentSampler-next_2d.spv",
-    "generate_camera_rays": "generate_camera_rays.spv",
-    "rmiss": "rmiss.spv",
-    "rchit": "rchit.spv"
+    "sampler::independent::next_2d": "sampler-independent-next_2d.spv",
+    "sampler::independent::next_1d": "sampler-independent-next_1d.spv",
+    "sampler::independent::seed": "sampler-independent-seed.spv"
   }
 }

@@ -1,8 +1,10 @@
 mod accel;
 mod array;
-mod integrator;
+mod integrators;
 mod loaders;
 mod pipelines;
+mod render;
+mod samplers;
 // mod renderer;
 mod sbt;
 mod scene;
@@ -11,33 +13,13 @@ mod scene;
 use glam::*;
 use screen_13::prelude::*;
 
-use self::integrator::WavefrontPathIntegrator;
 use self::loaders::Loader;
 use self::scene::Scene;
 
 fn main() {
     pretty_env_logger::init();
 
-    let sc13 = EventLoop::new()
-        .debug(true)
-        .ray_tracing(true)
-        .build()
-        .unwrap();
-    let device = &sc13.device;
-    let mut cache = HashPool::new(device);
-
-    let integrator = WavefrontPathIntegrator::new(device);
-
     let mut scene = Scene::default();
     let loader = loaders::GltfLoader::default();
     loader.append("assets/cornell-box.gltf", &mut scene);
-
-    let mut graph = RenderGraph::new();
-
-    // scene.update(device, &mut cache, &mut graph);
-
-    integrator.render(&mut scene, uvec2(128, 128));
-
-    graph.resolve();
-    unsafe { device.device_wait_idle().unwrap() };
 }
